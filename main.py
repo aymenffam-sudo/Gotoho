@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # --- الإعدادات ---
 TOKEN = "8541787354:AAEmvs6oZ4E-pErraa5ZCSDaKOFn2lwlc6s"
 # يفضل وضع الـ Seller Key في متغيرات البيئة على Railway أو GitHub Secrets
-KEYAUTH_SELLER_KEY = os.environ.get("KEYAUTH_SELLER_KEY", "YOUR_KEY_HERE")
+KEYAUTH_SELLER_KEY = os.environ.get("KEYAUTH-fXN0u7-sgGJmR-CR3UXx-Uf9zBP-QiKunB-vyhSig", "KEYAUTH-fXN0u7-sgGJmR-CR3UXx-Uf9zBP-QiKunB-vyhSig")
 KEYAUTH_API_URL = "https://keyauth.win/api/seller/"
 CHANNEL_URL = "https://t.me/TYMOxitado"
 SUPPORT_LINK = "https://t.me/TYMOxitado" 
