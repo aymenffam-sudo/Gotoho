@@ -1,133 +1,113 @@
 import os
 import logging
-import httpx
+import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# إعداد اللوغز
+# --- CONFIGURATION ---
+# Replace these with your actual KeyAuth Seller settings
+KEYAUTH_SELLER_KEY = os.environ.get("KEYAUTH_SELLER_KEY", "YOUR_SELLER_KEY_HERE")
+KEYAUTH_API_URL = "https://keyauth.win/api/seller/"
+# It is better to use an environment variable for the token!
+BOT_TOKEN = "7455950486:AAH41crmMxtNg3FFyetNXDf27ZBTF3dtoEI"
+
+# Logging setup
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- الإعدادات ---
-TOKEN = "8541787354:AAEmvs6oZ4E-pErraa5ZCSDaKOFn2lwlc6s"
-# يفضل وضع الـ Seller Key في متغيرات البيئة على Railway أو GitHub Secrets
-KEYAUTH_SELLER_KEY = os.environ.get("KEYAUTH-fXN0u7-sgGJmR-CR3UXx-Uf9zBP-QiKunB-vyhSig", "KEYAUTH-fXN0u7-sgGJmR-CR3UXx-Uf9zBP-QiKunB-vyhSig")
-KEYAUTH_API_URL = "https://keyauth.win/api/seller/"
-CHANNEL_URL = "https://t.me/TYMOxitado"
-SUPPORT_LINK = "https://t.me/TYMOxitado" 
-
-# استعمال Client واحد مفتوح للسرعة
-http_client = httpx.AsyncClient(timeout=10.0)
-
-# --- القوائم ---
-def get_main_menu():
-    keyboard = [
-        [InlineKeyboardButton("📁 Get Files", callback_data="get_files"),
-         InlineKeyboardButton("🔍 Check Status", callback_data="check_status")],
-        [InlineKeyboardButton("🔄 Reset HWID", callback_data="reset_hwid_info")],
-        [InlineKeyboardButton("🛒 Buy Keys", callback_data="buy_keys")],
-        [InlineKeyboardButton("📞 Support", url=SUPPORT_LINK),
-         InlineKeyboardButton("📢 Channel", url=CHANNEL_URL)],
-    ]
-    return InlineKeyboardMarkup(keyboard)
-
-# --- العمليات الأساسية ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = "👋 <b>مرحباً بك في متجر Fluorite!</b>\n\nاختر من القائمة أسفله لخدمتك:"
-    if update.message:
-        await update.message.reply_text(text, reply_markup=get_main_menu(), parse_mode="HTML")
-    else:
-        await update.callback_query.edit_message_text(text, reply_markup=get_main_menu(), parse_mode="HTML")
+    keyboard = [
+        [InlineKeyboardButton("📊 Check Status", callback_data='status_help')],
+        [InlineKeyboardButton("🔄 Reset HWID", callback_data='reset_help')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "💎 <b>Welcome to Fluorite Bot</b>\nManage your licenses instantly.",
+        reply_markup=reply_markup,
+        parse_mode="HTML"
+    )
+
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if query.data == 'status_help':
+        await query.edit_message_text("Usage: <code>/status YOUR_KEY</code>", parse_mode="HTML")
+    elif query.data == 'reset_help':
+        await query.edit_message_text("Usage: <code>/reset YOUR_KEY</code>", parse_mode="HTML")
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("❌ Usage: <code>/status KEY</code>", parse_mode="HTML")
+        await update.message.reply_text("❌ <b>Please provide a key.</b>\nUsage: <code>/status KEY</code>", parse_mode="HTML")
         return
-
+    
     key = context.args[0].upper()
-    sent_msg = await update.message.reply_text("⚡ <i>جاري التحقق...</i>", parse_mode="HTML")
-
-    try:
-        params = {"sellerkey": KEYAUTH_SELLER_KEY, "type": "info", "key": key}
-        response = await http_client.get(KEYAUTH_API_URL, params=params)
-        data = response.json()
-
-        if data.get("success"):
-            info = data.get("key", {})
-            msg = (f"✅ <b>Key Info:</b>\n"
-                   f"🔑 Key: <code>{key}</code>\n"
-                   f"⏳ Expiry: {info.get('expires')}")
-        else:
-            msg = "❌ <b>الكود غير صحيح أو منتهي.</b>"
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        msg = "⚠️ عذراً، حدث خطأ في الاتصال بالسيرفر."
-
-    await sent_msg.edit_text(msg, parse_mode="HTML")
-
-# --- وظيفة Reset HWID ---
-async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("❌ Usage: <code>/reset KEY</code>", parse_mode="HTML")
-        return
-
-    key = context.args[0].upper()
-    sent_msg = await update.message.reply_text("⏳ <i>جاري تصفير الـ HWID...</i>", parse_mode="HTML")
-
-    params = {
-        "sellerkey": KEYAUTH_SELLER_KEY,
-        "type": "resethwid",
-        "key": key
-    }
     
     try:
-        response = await http_client.get(KEYAUTH_API_URL, params=params)
+        params = {"sellerkey": KEYAUTH_SELLER_KEY, "type": "info", "key": key}
+        response = requests.get(KEYAUTH_API_URL, params=params, timeout=10)
         data = response.json()
         
         if data.get("success"):
-            msg = f"✅ <b>بصحة و راحة!</b>\nتم تصفير HWID للكود: <code>{key}</code> بنجاح."
+            key_info = data.get("key", {})
+            # KeyAuth returns 'active' as a status or boolean usually
+            await update.message.reply_text(
+                f"🔑 <b>Key Status</b>\n\n"
+                f"<b>Key:</b> <code>{key}</code>\n"
+                f"<b>Status:</b> ✅ Active\n"
+                f"<b>Expiry:</b> {key_info.get('expires', 'N/A')}",
+                parse_mode="HTML"
+            )
         else:
-            # عرض سبب الفشل من KeyAuth (مثلاً الكود غير موجود)
-            error_msg = data.get('message', 'Unknown error')
-            msg = f"❌ <b>فشل التصفير:</b>\n{error_msg}"
-            
+            await update.message.reply_text(f"❌ <b>Error:</b> {data.get('message', 'Key not found.')}", parse_mode="HTML")
     except Exception as e:
-        logger.error(f"Reset Error: {e}")
-        msg = "⚠️ حدث خطأ أثناء الاتصال بـ KeyAuth."
+        logger.error(f"Status error: {e}")
+        await update.message.reply_text("❌ <b>API Error.</b> Please try again later.", parse_mode="HTML")
 
-    await sent_msg.edit_text(msg, parse_mode="HTML")
-
-async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+async def reset_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("❌ <b>Usage:</b> <code>/reset KEY</code>", parse_mode="HTML")
+        return
     
-    if query.data == "check_status":
-        await query.edit_message_text(
-            "🔍 للتحقق من حالة الكود، أرسل:\n<code>/status YOUR_KEY</code>",
-            parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="back")]])
-        )
-    elif query.data == "reset_hwid_info":
-        await query.edit_message_text(
-            "🔄 لتصفير الـ HWID، أرسل الأمر التالي:\n\n<code>/reset YOUR_KEY</code>",
-            parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="back")]])
-        )
-    elif query.data == "back":
-        await start(update, context)
+    key = context.args[0].upper()
+    try:
+        # KeyAuth Seller API reset type is usually 'reset'
+        params = {"sellerkey": KEYAUTH_SELLER_KEY, "type": "reset", "key": key}
+        response = requests.get(KEYAUTH_API_URL, params=params, timeout=10)
+        data = response.json()
+        
+        if data.get("success"):
+            await update.message.reply_text(f"✅ <b>HWID Reset successfully</b> for: <code>{key}</code>", parse_mode="HTML")
+        else:
+            await update.message.reply_text(f"❌ <b>Reset Failed:</b> {data.get('message')}", parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"Reset error: {e}")
+        await update.message.reply_text("❌ <b>API Error.</b>", parse_mode="HTML")
 
-# --- تشغيل البوت ---
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    help_text = (
+        "📚 <b>Available Commands</b>\n\n"
+        "/start - Start the bot\n"
+        "/reset KEY - Reset key HWID\n"
+        "/status KEY - Check key status\n"
+        "/help - Show this message"
+    )
+    await update.message.reply_text(help_text, parse_mode="HTML")
+
 def main():
-    # تصحيح التوكن هنا
-    app = Application.builder().token(TOKEN).build()
-    
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("status", status_command))
-    app.add_handler(CommandHandler("reset", reset_command)) # إضافة الهاندلر الجديد
-    app.add_handler(CallbackQueryHandler(handle_callbacks))
-    
-    print("🚀 Bot is running with Reset HWID feature...")
-    app.run_polling()
+    if not BOT_TOKEN:
+        logger.error("No Bot Token provided!")
+        return
+
+    application = Application.builder().token(BOT_TOKEN).build()
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("reset", reset_key))
+    application.add_handler(CommandHandler("status", status_command))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CallbackQueryHandler(button_callback))
+
+    logger.info("✅ Fluorite Bot is running...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
     main()
