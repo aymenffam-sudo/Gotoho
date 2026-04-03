@@ -9,7 +9,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 KEYAUTH_SELLER_KEY = os.environ.get("KEYAUTH_SELLER_KEY", "YOUR_SELLER_KEY_HERE")
 KEYAUTH_API_URL = "https://keyauth.win/api/seller/"
 # It is better to use an environment variable for the token!
-BOT_TOKEN = "7455950486:AAH41crmMxtNg3FFyetNXDf27ZBTF3dtoEI"
+BOT_TOKEN = "8678726565:AAFkZ20gZH9OnFKbkjZef5-v2jldqNlDwnA"
 
 # Logging setup
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
