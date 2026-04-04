@@ -1,3 +1,2 @@
 aiogram
 telethon
-sqlite3
