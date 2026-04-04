@@ -21,7 +21,7 @@ from telethon import TelegramClient, events
 # CONFIGURATION SECTION / قسم الإعدادات
 # ==================================================================================
 API_TOKEN = os.getenv('API_TOKEN', '8638296342:AAEmpdm-9PrI3C-tRO3eE0ZnvS2mSxtSkvY')
-ADMIN_ID = 6676819684
+ADMIN_ID = 7353340708
 SECONDARY_ADMIN_ID = 7882408027
 API_ID = int(os.getenv('API_ID', 39251268))
 API_HASH = os.getenv('API_HASH', '14bb52049cf99c27b9173725c18b75f8')
